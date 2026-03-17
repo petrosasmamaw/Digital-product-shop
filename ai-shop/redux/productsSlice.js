@@ -18,6 +18,20 @@ export const fetchProductsAsync = createAsyncThunk(
   }
 );
 
+export const fetchProductAsync = createAsyncThunk(
+  "products/fetchProduct",
+  async (productId, { rejectWithValue }) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/products/${productId}`);
+      if (!res.ok) throw new Error("Failed to fetch product");
+      const data = await res.json();
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 export const getAiRecommendationsAsync = createAsyncThunk(
   "products/getAiRecommendations",
   async (queryData, { rejectWithValue }) => {
@@ -43,6 +57,9 @@ const productsSlice = createSlice({
     total: 0,
     loading: false,
     error: null,
+    currentProduct: null,
+    productLoading: false,
+    productError: null,
     aiResults: null,
     aiLoading: false,
     aiError: null,
@@ -70,6 +87,18 @@ const productsSlice = createSlice({
       .addCase(fetchProductsAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(fetchProductAsync.pending, (state) => {
+        state.productLoading = true;
+        state.productError = null;
+      })
+      .addCase(fetchProductAsync.fulfilled, (state, action) => {
+        state.productLoading = false;
+        state.currentProduct = action.payload;
+      })
+      .addCase(fetchProductAsync.rejected, (state, action) => {
+        state.productLoading = false;
+        state.productError = action.payload;
       })
       .addCase(getAiRecommendationsAsync.pending, (state) => {
         state.aiLoading = true;
