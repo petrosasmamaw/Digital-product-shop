@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Loader from "@/components/Loader";
+import { fetchUserOrders } from "@/redux/ordersSlice";
 
 export default function DashboardPage() {
   const user = useSelector((state) => state.user.user);
+  const { orders, loading, error } = useSelector((state) => state.orders);
+  const dispatch = useDispatch();
   const router = useRouter();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
@@ -18,20 +19,14 @@ export default function DashboardPage() {
       return;
     }
 
-    async function fetchOrders() {
+    async function loadOrders() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
-
-      const res = await fetch("/api/orders", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setOrders(Array.isArray(data) ? data : []);
-      setLoading(false);
+      dispatch(fetchUserOrders(token));
     }
 
-    fetchOrders();
-  }, [user, router]);
+    loadOrders();
+  }, [user, router, dispatch]);
 
   if (!user) return null;
 

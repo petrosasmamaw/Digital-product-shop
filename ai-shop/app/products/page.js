@@ -1,56 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import ProductCard from "@/components/ProductCard";
 import Loader from "@/components/Loader";
+import { fetchProductsAsync, getAiRecommendationsAsync } from "@/redux/productsSlice";
 
 const CATEGORIES = ["All", "Electronics", "Clothing", "Books", "Home", "Sports", "Beauty"];
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+  const { products, total, loading, error, aiResults, aiLoading, aiError } = useSelector((state) => state.products);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const LIMIT = 12;
 
   useEffect(() => {
-    async function fetchProducts() {
-      setLoading(true);
-      const params = new URLSearchParams({ page, limit: LIMIT });
-      if (search) params.set("search", search);
-      if (category !== "All") params.set("category", category);
-
-      const res = await fetch(`/api/products?${params}`);
-      const data = await res.json();
-      setProducts(data.products || []);
-      setTotal(data.total || 0);
-      setLoading(false);
-    }
-    fetchProducts();
-  }, [search, category, page]);
+    const params = { page, limit: LIMIT };
+    if (search) params.search = search;
+    if (category !== "All") params.category = category;
+    dispatch(fetchProductsAsync(params));
+  }, [search, category, page, dispatch]);
 
   // AI Recommendation state
   const [aiQuery, setAiQuery] = useState("");
-  const [aiResults, setAiResults] = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
 
   async function handleAiRecommend() {
     if (!aiQuery.trim()) return;
-    setAiLoading(true);
-    setAiResults(null);
-    const res = await fetch("/api/ai/recommend", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        productName: aiQuery,
-        category: category !== "All" ? category : undefined,
-      }),
-    });
-    const data = await res.json();
-    setAiResults(data);
-    setAiLoading(false);
+    const queryData = {
+      productName: aiQuery,
+      category: category !== "All" ? category : undefined,
+    };
+    dispatch(getAiRecommendationsAsync(queryData));
   }
 
   const totalPages = Math.ceil(total / LIMIT);
@@ -158,3 +140,5 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+const totalPages = Math.ceil(total / 12);

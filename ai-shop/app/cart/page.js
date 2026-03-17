@@ -5,12 +5,14 @@ import CartItem from "@/components/CartItem";
 import { clearCart } from "@/redux/cartSlice";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { createUserOrder } from "@/redux/ordersSlice";
 
 export default function CartPage() {
   const dispatch = useDispatch();
   const router = useRouter();
   const { items, totalQuantity, totalPrice } = useSelector((state) => state.cart);
   const user = useSelector((state) => state.user.user);
+  const { loading, error } = useSelector((state) => state.orders);
 
   async function handleCheckout() {
     if (!user) {
@@ -21,25 +23,20 @@ export default function CartPage() {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData?.session?.access_token;
 
-    const res = await fetch("/api/orders", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        items: items.map((item) => ({
-          productId: item._id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          image: item.image,
-        })),
-        totalPrice,
-      }),
-    });
+    const orderData = {
+      items: items.map((item) => ({
+        productId: item._id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image,
+      })),
+      totalPrice,
+    };
 
-    if (res.ok) {
+    const result = await dispatch(createUserOrder({ orderData, token }));
+
+    if (createUserOrder.fulfilled.match(result)) {
       dispatch(clearCart());
       router.push("/dashboard");
     } else {

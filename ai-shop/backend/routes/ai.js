@@ -1,15 +1,13 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import connectToDatabase from "@/lib/mongodb";
-import Product from "@/models/Product";
+const express = require("express");
+const router = express.Router();
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const connectToDatabase = require("../lib/mongodb");
+const Product = require("../models/Product");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", ["POST"]);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
-  }
-
+// POST /ai/recommend - Get AI recommendations
+router.post("/recommend", async (req, res) => {
   const { productName, category, budget } = req.body;
 
   if (!productName) {
@@ -62,9 +60,11 @@ Format your response as JSON:
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
-    return res.status(200).json(parsed);
+    res.status(200).json(parsed);
   } catch (err) {
     console.error("AI recommendation error:", err);
-    return res.status(500).json({ error: "Failed to generate recommendations" });
+    res.status(500).json({ error: "Failed to generate recommendations" });
   }
-}
+});
+
+module.exports = router;
