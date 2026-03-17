@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const connectToDatabase = require("../lib/mongodb");
 const Product = require("../models/Product");
+const { upload } = require("../lib/cloudinary");
 
 // GET /products - Get all products with optional filters
 router.get("/", async (req, res) => {
@@ -25,11 +26,37 @@ router.get("/", async (req, res) => {
   }
 });
 
+// POST /products/upload - Upload product image
+router.post("/upload", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No image file provided" });
+    }
+
+    // Return the Cloudinary URL
+    res.status(200).json({
+      imageUrl: req.file.path,
+      publicId: req.file.filename,
+      message: "Image uploaded successfully"
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to upload image" });
+  }
+});
+
 // POST /products - Create a new product
-router.post("/", async (req, res) => {
+router.post("/", upload.single("image"), async (req, res) => {
   try {
     await connectToDatabase();
-    const product = await Product.create(req.body);
+
+    const productData = { ...req.body };
+
+    // If an image was uploaded, use the Cloudinary URL
+    if (req.file) {
+      productData.image = req.file.path;
+    }
+
+    const product = await Product.create(productData);
     res.status(201).json(product);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -49,10 +76,18 @@ router.get("/:id", async (req, res) => {
 });
 
 // PUT /products/:id - Update a product
-router.put("/:id", async (req, res) => {
+router.put("/:id", upload.single("image"), async (req, res) => {
   try {
     await connectToDatabase();
-    const updated = await Product.findByIdAndUpdate(req.params.id, req.body, {
+
+    const updateData = { ...req.body };
+
+    // If a new image was uploaded, use the Cloudinary URL
+    if (req.file) {
+      updateData.image = req.file.path;
+    }
+
+    const updated = await Product.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });
