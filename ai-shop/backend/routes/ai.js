@@ -1,14 +1,22 @@
+// Ensure dotenv is loaded if this file is run independently, 
+// though your server.js usually handles this.
+require("dotenv").config(); 
 const express = require("express");
 const router = express.Router();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const connectToDatabase = require("../lib/mongodb");
 const Product = require("../models/Product");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize AI outside the route to save resources
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-// POST /ai/recommend - Get AI recommendations
 router.post("/recommend", async (req, res) => {
   const { productName, category, budget } = req.body;
+
+  if (!process.env.GEMINI_API_KEY) {
+    console.error("ERROR: GEMINI_API_KEY is missing from .env");
+    return res.status(500).json({ error: "AI configuration error" });
+  }
 
   if (!productName) {
     return res.status(400).json({ error: "productName is required" });
@@ -17,53 +25,50 @@ router.post("/recommend", async (req, res) => {
   try {
     await connectToDatabase();
 
-    // Fetch relevant products from DB for context
-    const products = await Product.find(
-      category ? { category } : {}
-    )
-      .limit(20)
-      .lean();
+    const filter = (category && category !== "All") ? { category } : {};
+    const products = await Product.find(filter).limit(15).lean();
 
-    const productList = products
-      .map((p) => `- ${p.name} ($${p.price}) [${p.category}]: ${p.description}`)
-      .join("\n");
+    const productList = products.length > 0 
+      ? products.map(p => `- Name: ${p.name}, Price: $${p.price}, Desc: ${p.description}`).join("\n")
+      : "No specific matches in catalog, suggest general items.";
 
-    const prompt = `You are a helpful AI shopping assistant for an e-commerce store.
-A user is interested in: "${productName}"${category ? ` in category: ${category}` : ""}${budget ? ` with a budget of $${budget}` : ""}.
+    const prompt = `You are an e-commerce assistant. 
+User wants: "${productName}" ${budget ? `with budget $${budget}` : ""}.
+Available Items:
+${productList}
 
-Here are the available products in our store:
-${productList || "No products currently available."}
-
-Please provide:
-1. 3 recommended products from the list above that best match the user's needs.
-2. A brief reason for each recommendation.
-3. One budget tip if applicable.
-
-Format your response as JSON:
+Return ONLY a JSON object with this structure:
 {
-  "recommendations": [
-    { "name": "...", "reason": "..." },
-    { "name": "...", "reason": "..." },
-    { "name": "...", "reason": "..." }
-  ],
-  "budgetTip": "..."
+  "recommendations": [{ "name": "item name", "reason": "why" }],
+  "budgetTip": "one tip"
 }`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    // Extract JSON from the response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return res.status(200).json({ raw: text, recommendations: [], budgetTip: "" });
+    // Use a standard call and manually parse to avoid 500s from strict mime-type configs
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    // Clean the string: find the first '{' and last '}'
+    const startIdx = text.indexOf('{');
+    const endIdx = text.lastIndexOf('}');
+    
+    if (startIdx === -1 || endIdx === -1) {
+      throw new Error("AI did not return valid JSON block");
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    const jsonString = text.substring(startIdx, endIdx + 1);
+    const parsed = JSON.parse(jsonString);
+
     res.status(200).json(parsed);
+
   } catch (err) {
-    console.error("AI recommendation error:", err);
-    res.status(500).json({ error: "Failed to generate recommendations" });
+    console.error("Detailed AI Error:", err.message);
+    res.status(500).json({ 
+      error: "Failed to generate recommendations", 
+      details: err.message 
+    });
   }
 });
 
