@@ -1,6 +1,5 @@
-// Ensure dotenv is loaded if this file is run independently, 
-// though your server.js usually handles this.
-require("dotenv").config(); 
+
+reupdate quire("dotenv").config(); 
 const express = require("express");
 const router = express.Router();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
