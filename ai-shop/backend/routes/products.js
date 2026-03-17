@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const connectToDatabase = require("../lib/mongodb");
 const Product = require("../models/Product");
-const authMiddleware = require("../middleware/authMiddleware");
 
 // GET /products - Get all products with optional filters
 router.get("/", async (req, res) => {
@@ -26,8 +25,8 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /products - Create a new product (requires auth)
-router.post("/", authMiddleware, async (req, res) => {
+// POST /products - Create a new product
+router.post("/", async (req, res) => {
   try {
     await connectToDatabase();
     const product = await Product.create(req.body);
@@ -49,8 +48,8 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// PUT /products/:id - Update a product (requires auth)
-router.put("/:id", authMiddleware, async (req, res) => {
+// PUT /products/:id - Update a product
+router.put("/:id", async (req, res) => {
   try {
     await connectToDatabase();
     const updated = await Product.findByIdAndUpdate(req.params.id, req.body, {
@@ -64,8 +63,8 @@ router.put("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /products/:id - Delete a product (requires auth)
-router.delete("/:id", authMiddleware, async (req, res) => {
+// DELETE /products/:id - Delete a product
+router.delete("/:id", async (req, res) => {
   try {
     await connectToDatabase();
     const deleted = await Product.findByIdAndDelete(req.params.id);

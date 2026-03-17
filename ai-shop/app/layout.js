@@ -1,6 +1,7 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import ReduxProvider from "@/components/ReduxProvider";
+import AuthChecker from "@/components/AuthChecker";
 
 export const metadata = {
   title: "AI Shop",
@@ -12,6 +13,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className="bg-gray-50 min-h-screen">
         <ReduxProvider>
+          <AuthChecker />
           <Navbar />
           <main className="max-w-7xl mx-auto px-4 py-8">{children}</main>
         </ReduxProvider>

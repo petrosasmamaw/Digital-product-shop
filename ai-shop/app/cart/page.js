@@ -4,7 +4,6 @@ import { useSelector, useDispatch } from "react-redux";
 import CartItem from "@/components/CartItem";
 import { clearCart } from "@/redux/cartSlice";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
 import { createUserOrder } from "@/redux/ordersSlice";
 
 export default function CartPage() {
@@ -20,10 +19,8 @@ export default function CartPage() {
       return;
     }
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData?.session?.access_token;
-
     const orderData = {
+      userId: user.id,
       items: items.map((item) => ({
         productId: item._id,
         name: item.name,
@@ -34,7 +31,7 @@ export default function CartPage() {
       totalPrice,
     };
 
-    const result = await dispatch(createUserOrder({ orderData, token }));
+    const result = await dispatch(createUserOrder(orderData));
 
     if (createUserOrder.fulfilled.match(result)) {
       dispatch(clearCart());

@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
-import { clearUser } from "@/redux/userSlice";
+import { logoutUser } from "@/redux/userSlice";
 import { clearCart } from "@/redux/cartSlice";
-import { supabase } from "@/lib/supabaseClient";
 
 export default function Navbar() {
   const dispatch = useDispatch();
@@ -12,8 +11,7 @@ export default function Navbar() {
   const totalQuantity = useSelector((state) => state.cart.totalQuantity);
 
   async function handleLogout() {
-    await supabase.auth.signOut();
-    dispatch(clearUser());
+    await dispatch(logoutUser());
     dispatch(clearCart());
   }
 

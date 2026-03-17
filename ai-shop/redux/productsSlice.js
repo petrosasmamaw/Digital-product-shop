@@ -1,12 +1,16 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { fetchProducts, getAiRecommendations } from "@/utils/api";
+
+const API_BASE_URL = "http://localhost:5000/api";
 
 // Async thunks
 export const fetchProductsAsync = createAsyncThunk(
   "products/fetchProducts",
   async (params, { rejectWithValue }) => {
     try {
-      const data = await fetchProducts(params);
+      const query = new URLSearchParams(params);
+      const res = await fetch(`${API_BASE_URL}/products?${query}`);
+      if (!res.ok) throw new Error("Failed to fetch products");
+      const data = await res.json();
       return data;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -18,7 +22,13 @@ export const getAiRecommendationsAsync = createAsyncThunk(
   "products/getAiRecommendations",
   async (queryData, { rejectWithValue }) => {
     try {
-      const data = await getAiRecommendations(queryData);
+      const res = await fetch(`${API_BASE_URL}/ai/recommend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(queryData),
+      });
+      if (!res.ok) throw new Error("Failed to get AI recommendations");
+      const data = await res.json();
       return data;
     } catch (error) {
       return rejectWithValue(error.message);

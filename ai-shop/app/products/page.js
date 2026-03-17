@@ -8,20 +8,37 @@ import { fetchProductsAsync, getAiRecommendationsAsync } from "@/redux/productsS
 
 const CATEGORIES = ["All", "Electronics", "Clothing", "Books", "Home", "Sports", "Beauty"];
 
+export const dynamic = 'force-dynamic';
+
 export default function ProductsPage() {
   const dispatch = useDispatch();
-  const { products, total, loading, error, aiResults, aiLoading, aiError } = useSelector((state) => state.products);
+  const [isClient, setIsClient] = useState(false);
+  const productsState = useSelector((state) => state.products);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [page, setPage] = useState(1);
   const LIMIT = 12;
 
+  // Safe access to state properties
+  const products = isClient ? productsState?.products || [] : [];
+  const total = isClient ? productsState?.total || 0 : 0;
+  const loading = isClient ? productsState?.loading || false : false;
+  const error = isClient ? productsState?.error || null : null;
+  const aiResults = isClient ? productsState?.aiResults || null : null;
+  const aiLoading = isClient ? productsState?.aiLoading || false : false;
+  const aiError = isClient ? productsState?.aiError || null : null;
+
   useEffect(() => {
+    setIsClient(true); // eslint-disable-line react-hooks/set-state-in-effect
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
     const params = { page, limit: LIMIT };
     if (search) params.search = search;
     if (category !== "All") params.category = category;
     dispatch(fetchProductsAsync(params));
-  }, [search, category, page, dispatch]);
+  }, [search, category, page, dispatch, isClient]);
 
   // AI Recommendation state
   const [aiQuery, setAiQuery] = useState("");
@@ -35,7 +52,7 @@ export default function ProductsPage() {
     dispatch(getAiRecommendationsAsync(queryData));
   }
 
-  const totalPages = Math.ceil(total / LIMIT);
+  const totalPages = isClient && total ? Math.ceil(total / LIMIT) : 0;
 
   return (
     <div>
@@ -140,5 +157,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-
-const totalPages = Math.ceil(total / 12);

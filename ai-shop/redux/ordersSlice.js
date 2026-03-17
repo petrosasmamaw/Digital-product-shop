@@ -1,12 +1,17 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { fetchOrders, createOrder } from "@/utils/api";
+
+const API_BASE_URL = "http://localhost:5000/api";
 
 // Async thunks
 export const fetchUserOrders = createAsyncThunk(
   "orders/fetchUserOrders",
-  async (token, { rejectWithValue }) => {
+  async (userId, { rejectWithValue }) => {
     try {
-      const data = await fetchOrders(token);
+      const res = await fetch(`${API_BASE_URL}/orders?userId=${userId}`, {
+        headers: {},
+      });
+      if (!res.ok) throw new Error("Failed to fetch orders");
+      const data = await res.json();
       return data;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -16,9 +21,17 @@ export const fetchUserOrders = createAsyncThunk(
 
 export const createUserOrder = createAsyncThunk(
   "orders/createUserOrder",
-  async ({ orderData, token }, { rejectWithValue }) => {
+  async (orderData, { rejectWithValue }) => {
     try {
-      const data = await createOrder(orderData, token);
+      const res = await fetch(`${API_BASE_URL}/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderData),
+      });
+      if (!res.ok) throw new Error("Failed to create order");
+      const data = await res.json();
       return data;
     } catch (error) {
       return rejectWithValue(error.message);

@@ -2,10 +2,10 @@
 
 import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Loader from "@/components/Loader";
 import { fetchUserOrders } from "@/redux/ordersSlice";
+import { logoutUser } from "@/redux/userSlice";
 
 export default function DashboardPage() {
   const user = useSelector((state) => state.user.user);
@@ -19,20 +19,27 @@ export default function DashboardPage() {
       return;
     }
 
-    async function loadOrders() {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      dispatch(fetchUserOrders(token));
-    }
-
-    loadOrders();
+    dispatch(fetchUserOrders(user.id));
   }, [user, router, dispatch]);
+
+  const handleLogout = async () => {
+    await dispatch(logoutUser());
+    router.push("/login");
+  };
 
   if (!user) return null;
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard</h1>
+      <div className="flex justify-between items-center mb-2">
+        <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
+        <button
+          onClick={handleLogout}
+          className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 text-sm font-medium"
+        >
+          Logout
+        </button>
+      </div>
       <p className="text-gray-500 mb-8">{user.email}</p>
 
       <h2 className="text-xl font-semibold text-gray-700 mb-4">My Orders</h2>

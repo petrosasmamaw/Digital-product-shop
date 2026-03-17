@@ -1,38 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { useDispatch } from "react-redux";
-import { setUser } from "@/redux/userSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser } from "@/redux/userSlice";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
   const dispatch = useDispatch();
   const router = useRouter();
+  const { isLoading, error } = useSelector((state) => state.user);
   const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError("");
-    setLoading(true);
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
-    });
+    const result = await dispatch(loginUser(form));
 
-    setLoading(false);
-
-    if (authError) {
-      setError(authError.message);
-      return;
+    if (loginUser.fulfilled.match(result)) {
+      router.push("/products");
     }
-
-    dispatch(setUser(data.user));
-    router.push("/products");
   }
 
   return (
@@ -74,10 +61,10 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={isLoading}
           className="bg-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-60 mt-2"
         >
-          {loading ? "Logging in..." : "Login"}
+          {isLoading ? "Logging in..." : "Login"}
         </button>
       </form>
 
